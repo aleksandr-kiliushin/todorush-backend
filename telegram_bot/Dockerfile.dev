@@ -1,8 +1,0 @@
-FROM python:3.12.0
-
-WORKDIR /app
-COPY ./telegram_bot/requirements.txt ./requirements.txt
-
-RUN pip install -r ./requirements.txt
-
-CMD ["python", "main.py"]

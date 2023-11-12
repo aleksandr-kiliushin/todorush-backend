@@ -1,0 +1,28 @@
+version: '3.9'
+
+services:
+  database:
+    container_name: todorush_database
+    image: postgres:15.3
+    ports:
+      - '5432:5432'
+    restart: on-failure
+    volumes:
+      - ./database_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_DB=todorush_database
+
+  telegram_bot:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.telegram_bot.dev
+    container_name: todorush_telegram_bot
+    depends_on:
+      - database
+    restart: on-failure
+    volumes:
+      - .:/app
+
+volumes:
+  database_data:
