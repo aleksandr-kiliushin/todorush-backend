@@ -1,17 +1,17 @@
-import os
+import configparser
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, ConversationHandler, filters
-from os.path import join, dirname
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from schema import User, Task
 
-dotenv_path = join(dirname(__file__), '.env')
-load_dotenv(dotenv_path)
+env_config = configparser.ConfigParser()
+env_config.read("./.env")
+
+db_url = env_config.get("DEFAULT", "DB_URL", fallback=None)
+telegram_bot_api_key = env_config.get("DEFAULT", "TELEGRAM_BOT_API_KEY", fallback=None)
 
 
-db_url = os.getenv('DB_URL')
 engine = create_engine(db_url)
 Session = sessionmaker(bind=engine)
 
@@ -184,7 +184,7 @@ delete_task_handler = ConversationHandler(
 )
 
 
-app = ApplicationBuilder().token(os.getenv('TELEGRAM_BOT_API_KEY')).build()
+app = ApplicationBuilder().token(telegram_bot_api_key).build()
 app.add_handler(CommandHandler("hello", hello))
 app.add_handler(CommandHandler("tasks", tasks))
 app.add_handler(conversation_handler)
