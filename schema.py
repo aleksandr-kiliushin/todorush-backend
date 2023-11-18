@@ -21,3 +21,15 @@ class Task(Base):
 
 # Create a back-reference in the User class
 User.tasks = relationship('Task', back_populates='user')
+
+class VerificationCode(Base):
+	__tablename__ = 'verification_code'
+	id = Column(Integer, primary_key=True)
+	value = Column(String(6), nullable=False)
+	user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+	expires_at = Column(DateTime, nullable=False)
+
+	user = relationship('User', back_populates='verification_codes')
+
+# Create a back-reference in the User class
+User.verification_codes = relationship('VerificationCode', back_populates='user')

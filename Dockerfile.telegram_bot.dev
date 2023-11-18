@@ -1,12 +1,12 @@
 FROM python:3.12.0
 
+RUN apt update
+RUN apt install nodejs npm -y
+RUN npm i -g nodemon
+
 WORKDIR /app
 COPY ./requirements.txt ./requirements.txt
 
 RUN pip install -r ./requirements.txt
-
-RUN apt update
-RUN apt install nodejs npm -y
-RUN npm i -g nodemon
 
 CMD ["nodemon", "main.py"]

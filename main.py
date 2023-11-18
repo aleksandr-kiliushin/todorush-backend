@@ -1,9 +1,11 @@
+import random
+from datetime import datetime, timedelta
 import configparser
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, ConversationHandler, filters
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from schema import User, Task
+from schema import User, Task, VerificationCode
 
 env_config = configparser.ConfigParser()
 env_config.read("./.env")
@@ -14,6 +16,32 @@ telegram_bot_api_key = env_config.get("DEFAULT", "TELEGRAM_BOT_API_KEY", fallbac
 
 engine = create_engine(db_url)
 Session = sessionmaker(bind=engine)
+
+
+async def verification_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = update.effective_user.id # TODO: Rename to telegram_user_id
+    session = Session()
+
+    existing_user = session.query(User).filter_by(telegram_id=user_id).first()
+
+    if not existing_user:
+        await update.message.reply_text("You are not registered")
+        session.close()
+        return
+
+    verification_code = VerificationCode(
+        user=existing_user,
+        value=str(random.randint(100000, 999999)),
+        expires_at=datetime.now() + timedelta(minutes=1)
+    )
+
+    session.add(verification_code)
+    session.commit()
+
+    await update.message.reply_text(f"{verification_code.value}, expires in one minute")
+
+    session.close()
+
 
 async def hello(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
@@ -185,6 +213,7 @@ delete_task_handler = ConversationHandler(
 
 
 app = ApplicationBuilder().token(telegram_bot_api_key).build()
+app.add_handler(CommandHandler("verification_code", verification_code))
 app.add_handler(CommandHandler("hello", hello))
 app.add_handler(CommandHandler("tasks", tasks))
 app.add_handler(conversation_handler)
