@@ -13,6 +13,19 @@ services:
       - POSTGRES_HOST_AUTH_METHOD=trust
       - POSTGRES_DB=todorush_database
 
+  backend:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.backend.dev
+    container_name: todorush_backend
+    depends_on:
+      - database
+    ports:
+      - 8000:8000
+    restart: on-failure
+    volumes:
+      - .:/app
+
   telegram_bot:
     build:
       context: .
