@@ -1,0 +1,11 @@
+version: '3.9'
+
+services:
+  telegram_bot:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.telegram_bot.dev
+    container_name: todorush_telegram_bot
+    restart: on-failure
+    volumes:
+      - .:/app
