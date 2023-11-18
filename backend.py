@@ -1,7 +1,7 @@
 import configparser
+from datetime import datetime, timedelta
 import json
 import jwt
-from typing import Union
 from fastapi import FastAPI, Request
 from schema import User, VerificationCode
 from sqlalchemy import create_engine
@@ -17,16 +17,6 @@ AUTHORIZATION_TOKEN_SECRET = env_config.get("DEFAULT", "AUTHORIZATION_TOKEN_SECR
 
 engine = create_engine(DB_URL)
 Session = sessionmaker(bind=engine)
-
-
-@app.get("/")
-def read_root():
-	return {"Hello": "World"}
-
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Union[str, None] = None):
-	return {"item_id": item_id, "q": q}
 
 
 @app.post("/api/authorize")
@@ -47,7 +37,14 @@ async def authorize(request: Request):
 
 	if verification_code:
 		session.query(VerificationCode).filter(VerificationCode.user_id == verification_code.user_id).delete()
-		authorization_token = jwt.encode({"user_id": 1}, AUTHORIZATION_TOKEN_SECRET, algorithm="HS256")
+		authorization_token = jwt.encode(
+			{
+				"user_id": verification_code.user_id,
+				"expires_at": str(datetime.now() + timedelta(days=10))
+			},
+			AUTHORIZATION_TOKEN_SECRET,
+			algorithm="HS256"
+		)
 		return {"authorization_token": authorization_token}
 	else:
 		return {"error": "Invalid verification code"}
@@ -61,6 +58,10 @@ def me(request: Request):
 		decoded_data = jwt.decode(authorization_token, AUTHORIZATION_TOKEN_SECRET, algorithms=["HS256"])
 	except:
 		return {"error": "Invalid authorization token"}
+	
+	expires_at = datetime.strptime(decoded_data['expires_at'], "%Y-%m-%d %H:%M:%S.%f")
+	if expires_at < datetime.now():
+		return {"error": "Authorization token expired"}
 
 	session = Session()
 	user = session.query(User).filter_by(id=decoded_data["user_id"]).first()
