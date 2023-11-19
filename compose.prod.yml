@@ -9,3 +9,14 @@ services:
     restart: on-failure
     volumes:
       - .:/app
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.backend.prod
+    container_name: todorush_backend
+    ports:
+      - 8000:8000
+    restart: on-failure
+    volumes:
+      - .:/app
