@@ -4,6 +4,7 @@ import json
 import jwt
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
+from fastapi.middleware.cors import CORSMiddleware
 from schema import User, VerificationCode
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -16,6 +17,15 @@ env_config.read("./.env")
 
 DB_URL = env_config.get("DEFAULT", "DB_URL", fallback=None)
 AUTHORIZATION_TOKEN_SECRET = env_config.get("DEFAULT", "AUTHORIZATION_TOKEN_SECRET", fallback=None)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[env_config.get("DEFAULT", "FRONTEND_URL_ORIGIN", fallback="http://localhost:3400")],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 engine = create_engine(DB_URL)
 Session = sessionmaker(bind=engine)

@@ -13,7 +13,7 @@ class Task(Base):
 	__tablename__ = 'task'
 	id = Column(Integer, primary_key=True)
 	user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
-	title = Column(String(255), nullable=False)
+	title = Column(String(255), nullable=False) # TODO: Add min length 1 symbols
 	description = Column(String(1000), nullable=True)
 	due_date = Column(DateTime, nullable=True)
 
