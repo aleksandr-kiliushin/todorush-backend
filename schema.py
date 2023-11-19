@@ -17,6 +17,7 @@ class Task(Base):
 	description = Column(String(1000), nullable=True)
 	due_date = Column(DateTime, nullable=True)
 
+	# TODO: Add field to populate to task
 	user = relationship('User', back_populates='tasks')
 
 # Create a back-reference in the User class

@@ -3,9 +3,11 @@ from datetime import datetime, timedelta
 import json
 import jwt
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from schema import User, VerificationCode
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from schema import Task
 
 app = FastAPI()
 
@@ -40,7 +42,7 @@ async def authorize(request: Request):
 		authorization_token = jwt.encode(
 			{
 				"user_id": verification_code.user_id,
-				"expires_at": str(datetime.now() + timedelta(days=10))
+				"expires_at": str(datetime.now() + timedelta(days=10)) # TODO: Use ISO
 			},
 			AUTHORIZATION_TOKEN_SECRET,
 			algorithm="HS256"
@@ -58,7 +60,7 @@ def me(request: Request):
 		decoded_data = jwt.decode(authorization_token, AUTHORIZATION_TOKEN_SECRET, algorithms=["HS256"])
 	except:
 		return {"error": "Invalid authorization token"}
-	
+
 	expires_at = datetime.strptime(decoded_data['expires_at'], "%Y-%m-%d %H:%M:%S.%f")
 	if expires_at < datetime.now():
 		return {"error": "Authorization token expired"}
@@ -73,5 +75,116 @@ def me(request: Request):
 
 	if not user:
 		return {"error": f"User with id {decoded_data['user_id']} not found"}
+
+	return response_body
+
+
+@app.get("/api/tasks")
+def tasks(request: Request):
+	authorization_token = request.headers.get('Authorization')
+
+	try:
+		decoded_data = jwt.decode(authorization_token, AUTHORIZATION_TOKEN_SECRET, algorithms=["HS256"])
+	except:
+		return {"error": "Invalid authorization token"}
+
+	expires_at = datetime.strptime(decoded_data['expires_at'], "%Y-%m-%d %H:%M:%S.%f")
+	if expires_at < datetime.now():
+		return {"error": "Authorization token expired"}
+
+	session = Session()
+	user = session.query(User).filter_by(id=decoded_data["user_id"]).first()
+	
+	if not user:
+		session.commit()
+		session.close()
+		return {"error": f"User with id {decoded_data['user_id']} not found"}
+
+	response_body = jsonable_encoder(user.tasks)
+
+	session.commit()
+	session.close()
+
+	return response_body
+
+
+@app.post("/api/tasks")
+async def create_task(request: Request):
+	authorization_token = request.headers.get('Authorization')
+
+	try:
+		decoded_data = jwt.decode(authorization_token, AUTHORIZATION_TOKEN_SECRET, algorithms=["HS256"])
+	except:
+		return {"error": "Invalid authorization token"}
+
+	expires_at = datetime.strptime(decoded_data['expires_at'], "%Y-%m-%d %H:%M:%S.%f")
+	if expires_at < datetime.now():
+		return {"error": "Authorization token expired"}
+
+	session = Session()
+	user = session.query(User).filter_by(id=decoded_data["user_id"]).first()
+
+	if not user:
+		session.commit()
+		session.close()
+		return {"error": f"User with id {decoded_data['user_id']} not found"}
+
+	request_body = await request.json()
+
+	new_task = Task(user_id=user.id, title=request_body["title"])
+
+	session.add(new_task)
+	session.commit()
+	session.flush()
+	session.refresh(new_task)
+
+	response_body = jsonable_encoder(new_task)
+
+	session.close()
+
+	return response_body
+
+
+@app.delete("/api/tasks/{task_id}")
+async def delete_task(task_id: int, request: Request):
+	print("task_id")
+	print(task_id)
+
+	authorization_token = request.headers.get('Authorization')
+
+	try:
+		decoded_data = jwt.decode(authorization_token, AUTHORIZATION_TOKEN_SECRET, algorithms=["HS256"])
+	except:
+		return {"error": "Invalid authorization token"}
+
+	expires_at = datetime.strptime(decoded_data['expires_at'], "%Y-%m-%d %H:%M:%S.%f")
+	if expires_at < datetime.now():
+		return {"error": "Authorization token expired"}
+
+	session = Session()
+	user = session.query(User).filter_by(id=decoded_data["user_id"]).first()
+
+	if not user:
+		session.commit()
+		session.close()
+		return {"error": f"User with id {decoded_data['user_id']} not found"}
+
+	task = session.query(Task).filter_by(id=task_id).first()
+
+	if not task:
+		session.commit()
+		session.close()
+		return {"error": f"Task with ID {task_id} is not found"}
+
+	if user.id != task.user_id:
+		session.commit()
+		session.close()
+		return {"error": f"You don't have access to task with ID {task_id}"}
+
+	response_body = jsonable_encoder(task)
+
+	session.delete(task)
+	session.commit()
+	session.close()
 
 	return response_body
