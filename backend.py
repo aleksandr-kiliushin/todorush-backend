@@ -2,7 +2,7 @@ import configparser
 from datetime import datetime, timedelta
 import json
 import jwt
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from schema import User, VerificationCode
@@ -39,7 +39,8 @@ async def authorize(request: Request):
     session = Session()
     verification_code = session.query(VerificationCode).filter_by(value=body["verification_code"]).first()
 
-    # TODO: if verification_code.expires_at < now(): throw error
+    if verification_code.expires_at < datetime.now():
+        raise HTTPException(status_code=400, detail="Expired verification code.")
 
     if verification_code:
         session.query(VerificationCode).filter(VerificationCode.user_id == verification_code.user_id).delete()
@@ -59,7 +60,7 @@ async def authorize(request: Request):
         )
         return {"authorization_token": authorization_token}
     else:
-        return {"error": "Invalid verification code"}
+        raise HTTPException(status_code=400, detail="Invalid verification code.")
 
 
 @app.get("/api/me")
@@ -69,11 +70,11 @@ def me(request: Request):
     try:
         decoded_data = jwt.decode(authorization_token, AUTHORIZATION_TOKEN_SECRET, algorithms=["HS256"])
     except:
-        return {"error": "Invalid authorization token"}
+        raise HTTPException(status_code=401, detail="Invalid authorization token.")
 
     expires_at = datetime.fromisoformat(decoded_data["expires_at"])
     if expires_at < datetime.now():
-        return {"error": "Authorization token expired"}
+        raise HTTPException(status_code=401, detail="Authorization token expired.")
 
     session = Session()
     user = session.query(User).filter_by(id=decoded_data["user_id"]).first()
@@ -84,7 +85,7 @@ def me(request: Request):
     session.close()
 
     if not user:
-        return {"error": f"User with id {decoded_data['user_id']} not found"}
+        raise HTTPException(status_code=404, detail=f"User with id {decoded_data['user_id']} not found.")
 
     return response_body
 
@@ -96,11 +97,11 @@ def tasks(request: Request):
     try:
         decoded_data = jwt.decode(authorization_token, AUTHORIZATION_TOKEN_SECRET, algorithms=["HS256"])
     except:
-        return {"error": "Invalid authorization token"}
+        raise HTTPException(status_code=401, detail="Invalid authorization token.")
 
     expires_at = datetime.fromisoformat(decoded_data["expires_at"])
     if expires_at < datetime.now():
-        return {"error": "Authorization token expired"}
+        raise HTTPException(status_code=401, detail="Authorization token expired.")
 
     session = Session()
     user = session.query(User).filter_by(id=decoded_data["user_id"]).first()
@@ -108,7 +109,7 @@ def tasks(request: Request):
     if not user:
         session.commit()
         session.close()
-        return {"error": f"User with id {decoded_data['user_id']} not found"}
+        raise HTTPException(status_code=404, detail=f"User with id {decoded_data['user_id']} not found.")
 
     response_body = jsonable_encoder(user.tasks)
 
@@ -125,11 +126,11 @@ async def create_task(request: Request):
     try:
         decoded_data = jwt.decode(authorization_token, AUTHORIZATION_TOKEN_SECRET, algorithms=["HS256"])
     except:
-        return {"error": "Invalid authorization token"}
+        raise HTTPException(status_code=401, detail="Invalid authorization token.")
 
     expires_at = datetime.fromisoformat(decoded_data["expires_at"])
     if expires_at < datetime.now():
-        return {"error": "Authorization token expired"}
+        raise HTTPException(status_code=401, detail="Authorization token expired.")
 
     session = Session()
     user = session.query(User).filter_by(id=decoded_data["user_id"]).first()
@@ -137,7 +138,7 @@ async def create_task(request: Request):
     if not user:
         session.commit()
         session.close()
-        return {"error": f"User with id {decoded_data['user_id']} not found"}
+        raise HTTPException(status_code=404, detail=f"User with id {decoded_data['user_id']} not found.")
 
     request_body = await request.json()
 
@@ -165,11 +166,11 @@ async def delete_task(task_id: int, request: Request):
     try:
         decoded_data = jwt.decode(authorization_token, AUTHORIZATION_TOKEN_SECRET, algorithms=["HS256"])
     except:
-        return {"error": "Invalid authorization token"}
+        raise HTTPException(status_code=401, detail="Invalid authorization token.")
 
     expires_at = datetime.fromisoformat(decoded_data["expires_at"])
     if expires_at < datetime.now():
-        return {"error": "Authorization token expired"}
+        raise HTTPException(status_code=401, detail="Authorization token expired.")
 
     session = Session()
     user = session.query(User).filter_by(id=decoded_data["user_id"]).first()
@@ -177,19 +178,19 @@ async def delete_task(task_id: int, request: Request):
     if not user:
         session.commit()
         session.close()
-        return {"error": f"User with id {decoded_data['user_id']} not found"}
+        raise HTTPException(status_code=404, detail=f"User with id {decoded_data['user_id']} not found.")
 
     task = session.query(Task).filter_by(id=task_id).first()
 
     if not task:
         session.commit()
         session.close()
-        return {"error": f"Task with ID {task_id} is not found"}
+        raise HTTPException(status_code=404, detail=f"Task with ID {task_id} is not found")
 
     if user.id != task.user_id:
         session.commit()
         session.close()
-        return {"error": f"You don't have access to task with ID {task_id}"}
+        raise HTTPException(status_code=403, detail=f"You don't have access to task with ID {task_id}")
 
     response_body = jsonable_encoder(task)
 
