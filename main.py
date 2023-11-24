@@ -39,7 +39,7 @@ async def verification_code(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     random_string = generate_random_string(50)
     verification_code = VerificationCode(
-        user=telegram_user, value=str(random_string), expires_at=datetime.now() + timedelta(minutes=2)
+        user=telegram_user, value=str(random_string), expires_at=(datetime.now() + timedelta(minutes=2)).isoformat()
     )
 
     session.add(verification_code)

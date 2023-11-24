@@ -52,7 +52,7 @@ async def authorize(request: Request):
         authorization_token = jwt.encode(
             {
                 "user_id": verification_code.user_id,
-                "expires_at": str(datetime.now() + timedelta(days=10)),  # TODO: Use ISO
+                "expires_at": str((datetime.now() + timedelta(days=1)).isoformat()),
             },
             AUTHORIZATION_TOKEN_SECRET,
             algorithm="HS256",
@@ -71,7 +71,7 @@ def me(request: Request):
     except:
         return {"error": "Invalid authorization token"}
 
-    expires_at = datetime.strptime(decoded_data["expires_at"], "%Y-%m-%d %H:%M:%S.%f")
+    expires_at = datetime.fromisoformat(decoded_data["expires_at"])
     if expires_at < datetime.now():
         return {"error": "Authorization token expired"}
 
@@ -98,7 +98,7 @@ def tasks(request: Request):
     except:
         return {"error": "Invalid authorization token"}
 
-    expires_at = datetime.strptime(decoded_data["expires_at"], "%Y-%m-%d %H:%M:%S.%f")
+    expires_at = datetime.fromisoformat(decoded_data["expires_at"])
     if expires_at < datetime.now():
         return {"error": "Authorization token expired"}
 
@@ -127,7 +127,7 @@ async def create_task(request: Request):
     except:
         return {"error": "Invalid authorization token"}
 
-    expires_at = datetime.strptime(decoded_data["expires_at"], "%Y-%m-%d %H:%M:%S.%f")
+    expires_at = datetime.fromisoformat(decoded_data["expires_at"])
     if expires_at < datetime.now():
         return {"error": "Authorization token expired"}
 
@@ -167,7 +167,7 @@ async def delete_task(task_id: int, request: Request):
     except:
         return {"error": "Invalid authorization token"}
 
-    expires_at = datetime.strptime(decoded_data["expires_at"], "%Y-%m-%d %H:%M:%S.%f")
+    expires_at = datetime.fromisoformat(decoded_data["expires_at"])
     if expires_at < datetime.now():
         return {"error": "Authorization token expired"}
 
